@@ -51,7 +51,7 @@ class agentReplyPlugin extends Plugin
 			return false;
 
 		//check department.
-		$departID = $this->config()->get('alert_dept');
+		$departID = $this->config['alert_dept'];
 		if ($departID == 0  || $departID = null){
 			} else {
 			if (!in_array($ticket->getDeptId(), $array_name))
@@ -279,7 +279,7 @@ class agentReplyPlugin extends Plugin
    */
 	private function log($title, $message) {
 		global $ost;
-		if ($this->config->get('agent-debug-msg'))
+		if ($this->config['agent-debug-msg'])
 			$ost->logWarning($title, $message, false);
 	}	
 }
