@@ -19,7 +19,7 @@ class agentReplyPlugin extends Plugin
 	public function bootstrap()
 	{
 		$this->plugininstance();
-		$this->config = $this->getConfig($this->instance->ins);
+		//$this->config = $this->getConfig($this->instance->ins);
 		Signal::connect('threadentry.created', array($this, 'agentreply'));
 	}
 
@@ -29,45 +29,46 @@ class agentReplyPlugin extends Plugin
 		if (method_exists($this,'getInstances')) {
 			$ins = $this->getInstances($this->id)->key['plugin_id'];
 			$this->instance->plugin = "plugin.".$this->id.".instance.".$ins;
-			$this->instance->backend = ".p".$this->id."i".$ins;
-			$this->instance->staff = ".p".$this->id."i".$ins;
 			$this->instance->ins = $this->getInstances()->first();
 		} else {
 			$this->instance->plugin = "plugin.".$this->id;
 		}
 	}
 		
-	function agentreply($object){
-		//$this->log('agentreply ', "threadentry.created executed");
-		
-		//initilize global threadentry 
+	function agentreply($object){		
+		//initilize global entores 
 		$this->threadentry = $object;
 		$this->thread = $this->threadentry->getThread();
+		$this->ticket = $this->threadentry->getThread()->getObject();
 
+			//error_log('agentreply0 '. "Agent replied to ticket#: ". $this->ticket->getNumber());
+			//error_log('getType '. json_encode($this->threadentry->getType()));
+			//$this->log('agentreply1 ', "Agent replied to ticket#: ". $this->ticket->getNumber());
+			
 		//Check to see if thread is a NOTE or EMAIL
-		if ($this->threadentry->getType()!='N') 
+		if ($this->threadentry->getType()!='N')
 			return false;
-		if ($this->threadentry->getSource()!='Email') 
+		
+		if ($this->threadentry->getSource()!='Email')
 			return false;
 
 		//check department.
-		$departID = $this->config['alert_dept'];
+		$departID = $this->getConfig($this->instance->ins)->get('alert_dept');
 		if ($departID == 0  || $departID = null){
 			} else {
-			if (!in_array($ticket->getDeptId(), $array_name))
+				if (!in_array($ticket->getDeptId(), $departID))
 				return false;
 		}
 		
-		//$this->log('assignNote ', "Type:'".$this->threadentry->type. " Source:" . $this->threadentry->getSource()"'");
-		
-		$this->ticket = $this->threadentry->getThread()->getObject();
+			$this->log('agentreply1 ', "Agent replied to ticket#: ". $this->ticket->getNumber() . " Type:'".$this->threadentry->type. " Source:" . $this->threadentry->getSource());
 		if (!$this->ticket instanceof Ticket)
 			return false;
 		
 		//assign ticket to the first responding agent.	
-		if (!$this->ticket->isAssigned() && $this->config->get('auto-assign')){
+		if (!$this->ticket->isAssigned() && $this->getConfig($this->instance->ins)->get('auto-assign')){
 			
 			$this->log('assignStaff ', "'".$this->threadentry->type."'");
+			error_log('assignStaff '.$this->threadentry->type."'");
 			if (($this->threadentry->type == 'M') && (($this->threadentry->flags & ThreadEntry::FLAG_COLLABORATOR) && (($this->threadentry->flags & ThreadEntry::FLAG_REPLY_ALL) || ($this->threadentry->flags & ThreadEntry::FLAG_REPLY_USER)))) {
 				
 				//is agent a collaborator
@@ -120,6 +121,7 @@ class agentReplyPlugin extends Plugin
 			return false;
 		
 		$this->log('switchResponse ', "Entry type converted from '".$this->threadentry->type."' to 'R'");
+		error_log('switchResponse '. "Entry type converted from '".$this->threadentry->type."' to 'R'");
 
 		$this->responseentry = ThreadEntry::lookup($this->threadentry->getId());
 		if (!$this->responseentry) 
@@ -144,11 +146,11 @@ class agentReplyPlugin extends Plugin
 		$vars['response'] = $this->responseentry->getBody();
 		$vars['reply-to'] = 'all';
 		$vars['emailcollab'] = $this->ticket->getActiveCollaborators();
-		$this->log('send vars ',json_encode($vars));
+		//$this->log('send vars ',json_encode($vars));
 		
 		$errors = array();
 		$response = $this->postReply($vars, $errors, true, true, $this->responseentry);
-		$this->log('Response',json_encode($response));
+		//$this->log('Response',json_encode($response));
 		
 		if (!empty($errors)) {
 			$this->log('PostReply Errors', json_encode($errors));
@@ -277,9 +279,11 @@ class agentReplyPlugin extends Plugin
    *
    * @param string $title, string $message
    */
-	private function log($title, $message) {
+	function log($title, $message) {
 		global $ost;
-		if ($this->config['agent-debug-msg'])
+		if ($this->getConfig($this->instance->ins)->get('agent-debug'))
+			//error_log('AgentThis '. json_encode($this->getConfig($this->instance->ins)->get('agent-debug')));
+			//$ost->logError('AgentThis', json_encode($this->getConfig($this->instance->ins)->get('agent-debug')), false);
 			$ost->logWarning($title, $message, false);
 	}	
 }
