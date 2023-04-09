@@ -5,7 +5,7 @@ Works and tested with version 1.10 to v1.17+ and PHP 8+
 
 Features
 ========
- - Multiple domain and server support.
+ ---
  
 Installing
 ==========
