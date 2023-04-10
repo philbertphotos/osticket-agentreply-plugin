@@ -46,16 +46,15 @@ class agentReplyConfig extends PluginConfig
 				'hint' => 'Configure Agent Reply Settings',
 			)
 		);
-		
-		$options['auto-assign'] = new ChoiceField(
-			array(
-				'label' => $__('Auto Assign'),
-				'choices' => array(0 => 'Yes' , 1 => 'No'),
-				'default' => 0,
-				'hint' => $__('Auto Assign to first responding agent?')
-			)
+		$options['auto-assign'] = new BooleanField(
+		array(
+			'label' => $__('Auto Assign') ,
+			'default' => false,
+			'hint' => $__('Auto Assign to first responding agent?'),
+			'configuration' => array(
+				'desc' => $__('Yes/No')
+			))
 		);
-			
 		$options['assign-dept'] = new ChoiceField(
 			array(
 				'label' => $__('Choose Department'),
@@ -92,3 +91,4 @@ class agentReplyConfig extends PluginConfig
 		return true;
 	}
 }
+
