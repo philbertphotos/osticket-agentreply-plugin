@@ -59,10 +59,10 @@ class agentReplyPlugin extends Plugin
 		  case 'N':
 			$this->log('AR triggered ', "Agent replied to ticket#: ". $this->ticket->getNumber() . " Type:'".$this->object->type. " Source:" . $this->object->getSource());
 
-				//assign ticket to the first responding agent.
+			//assign ticket to the first responding agent.
 			if (!$this->ticket->isAssigned() && $this->getConfig($this->instance->ins)->get('auto-assign')){
-				//$this->log('Ticket Info ', json_encode($this->threadentry));
-				$this->ticket->setStaffId($this->threadentry->getStaffId());	
+				$this->ticket->setStaffId($this->threadentry->getStaffId());
+				//$this->log('AR auto-assigned', "Ticket #".$this->ticket->getNumber()." auto-assigned to agent '".$collaborator->getEmail()->email."'");
 			}
 			if (!$this->switchResponse())
 				return false;
@@ -74,51 +74,46 @@ class agentReplyPlugin extends Plugin
 			$this->log('AR triggered ', "Agent replied to ticket#: ". $this->ticket->getNumber() . " Type:'".$this->object->type. " Source:" . $this->object->getSource());
 			if ($this->getConfig($this->instance->ins)->get('auto-assign')){
 				if (($this->object->flags & ThreadEntry::FLAG_COLLABORATOR) && (($this->object->flags & ThreadEntry::FLAG_REPLY_ALL) || ($this->object->flags & ThreadEntry::FLAG_REPLY_USER))) {
-				$this->addCollaborators();
+					//remove responding agent from collaborators
+					//$this->log('collaborators', json_encode($this->thread->getObject()->getActiveCollaborators()));
+					foreach ($collaborators as $collaborator) {
+						if ($collaborator->isActive()) {
+							if ($staffid = Staff::getIdByEmail($collaborator->getEmail()->email)) {		
+									//$this->ticket->setStaffId($staffid, false, true, __('SYSTEM'));
+									//$this->log('AR auto-assigned', "Ticket #".$this->ticket->getNumber()." auto-assigned to agent '".$collaborator->getEmail()->email."'");
+									if (!$this->ticket->isAssigned() && $this->getConfig($this->instance->ins)->get('auto-assign')){
+									
+									}
+									
+									$vars['cid']=array($collaborator->getId());
+									$vars['del']=array($collaborator->getId());		
+									
+									if($vars['del'] && ($ids=array_filter($vars['del']))) {
+										$collaborators = array();
+										foreach ($ids as $k => $cid) {
+											if (($collaborator=Collaborator::lookup($cid))
+											&& ($collaborator->getThreadId() == $this->thread->getId())
+											&& $collaborator->delete())
+												$collaborators[] = $collaborator;
+					
+											$this->thread->logCollaboratorEvents($collaborator, $vars);
+										}
+									}
+									if (!$this->switchResponse())
+										return false;
+					
+									return($this->sendResponse());						
+							}			
+						}
+					}
 				}
 			}
 			break; 		  
-		  break;
+
 		  default:
 		  return false;
 		}
 	}
-	
-	//
-	//Add respondig agent as a Collaborator
-	//
-	function addCollaborators() {
-		$this->log('collaborators', json_encode($this->thread->getObject()->getActiveCollaborators()));
-			$collaborators = $this->thread->getObject()->getActiveCollaborators();
-			$vars=array();
-			foreach ($collaborators as $collaborator) {
-				if ($collaborator->isActive()) {
-					if ($staffid = Staff::getIdByEmail($collaborator->getEmail()->email)) {			
-							$this->ticket->assignToStaff($staffid, false, true, __('SYSTEM'));
-							$this->log('auto-assigned', "Ticket #".$this->ticket->getNumber()." auto-assigned to '".$collaborator->getEmail()->email."'");
-							
-							$vars['cid']=array($collaborator->getId());
-							$vars['del']=array($collaborator->getId());		
-							
-							if($vars['del'] && ($ids=array_filter($vars['del']))) {
-								$collaborators = array();
-								foreach ($ids as $k => $cid) {
-									if (($collaborator=Collaborator::lookup($cid))
-									&& ($collaborator->getThreadId() == $this->thread->getId())
-									&& $collaborator->delete())
-										$collaborators[] = $collaborator;
-	
-									$this->thread->logCollaboratorEvents($collaborator, $vars);
-								}
-							}
-							if (!$this->switchResponse())
-								return false;
-	
-							return($this->sendResponse());						
-					}			
-				}
-			}
-		}
 	
 	//
 	//Switches NOTE to Response by modifying DB entry 
