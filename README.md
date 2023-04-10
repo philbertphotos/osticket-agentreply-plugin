@@ -5,7 +5,7 @@ Works and tested with version 1.10 to v1.17+ and PHP 8+
 
 Features
 ========
- ---
+ removes agents as collaborators when they respond by email and adds they as ticket owner if its unassigned.
  
 Installing
 ==========
@@ -24,4 +24,8 @@ Bug fixes
 
 Roadmap
 ==========
-Auto assign first Agent that responds via email.
+Auto assign first Agent that responds via email. (done)
+
+NOTES
+===========
+This is being used live in my environment, while I made several changes and updates to clean up the code before release its been tested and works as intended.
