@@ -2,6 +2,8 @@
 =====================================
 Basically the plugin converts a agent NOTE sent via email to a normal RESPONSE and then sends a email to the ticket creator, it will also auto-assign the ticket to the first agent that responds
 Works and tested with version 1.10 to v1.17+ and PHP 8+
+![image](https://user-images.githubusercontent.com/2892474/230892636-02f8edfe-52b9-4208-8e45-4bb84a9e382b.png)
+
 
 Features
 ========
