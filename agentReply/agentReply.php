@@ -85,10 +85,10 @@ class agentReplyPlugin extends Plugin
 									
 									}
 									
-									$vars['cid']=array($collaborator->getId());
-									$vars['del']=array($collaborator->getId());		
+									$resp['cid']=array($collaborator->getId());
+									$resp['del']=array($collaborator->getId());		
 									
-									if($vars['del'] && ($ids=array_filter($vars['del']))) {
+									if($resp['del'] && ($ids=array_filter($resp['del']))) {
 										$collaborators = array();
 										foreach ($ids as $k => $cid) {
 											if (($collaborator=Collaborator::lookup($cid))
@@ -96,7 +96,7 @@ class agentReplyPlugin extends Plugin
 											&& $collaborator->delete())
 												$collaborators[] = $collaborator;
 					
-											$this->thread->logCollaboratorEvents($collaborator, $vars);
+											$this->thread->logCollaboratorEvents($collaborator, $resp);
 										}
 									}
 									if (!$this->switchResponse())
@@ -120,75 +120,71 @@ class agentReplyPlugin extends Plugin
 	//	
 	function switchResponse() {
 		$sql = "UPDATE `".TABLE_PREFIX."thread_entry` SET `type`='R' WHERE `id`=". $this->object->getId() .";";
-		//$this->log('sql',$sql);
+		//$this->log('AP sql',$sql);
 		$result = db_query($sql);
-		if (!$result)
+		if (!$result){
 			return false;
-		
-		$this->log('switchResponse ', "Entry type converted from '".$this->object->type."' to 'R'");
-
-		$this->responseentry = ThreadEntry::lookup($this->object->getId());
-		if (!$this->responseentry) 
-			return false;
-		
-		if ($this->responseentry->getType()!='R'){
-			$this->log('responseentry-type ', "'".$this->responseentry-->getType()."'");
-			return false;
-		}			
-		return true;
+		} else {
+			$this->log('AP switchResponse ', "Entry type converted from '".$this->object->type."' to 'R'");
+			$this->responseentry = ThreadEntry::lookup($this->object->getId());
+			return true;
+		}
 	}
 
 	//
 	//Sends email response to ticket creator on agent response.
 	//
 	function sendResponse() {
-		$vars = array();
-		$vars['staffId'] = $this->responseentry->getStaffId();
-		$vars['thread-type'] = 'R';
-		if ($vars['staffId']) {$vars['poster'] = Staff::lookup($vars['staffId']);}
+		$resp = array();
+		$resp['staffId'] = $this->responseentry->getStaffId();
+		$resp['thread-type'] = 'R';
+		if ($resp['staffId']) {
+			$resp['poster'] = Staff::lookup($resp['staffId']);
+		}
 
-		$vars['response'] = $this->responseentry->getBody();
-		$vars['reply-to'] = 'all';
-		$vars['emailcollab'] = $this->ticket->getActiveCollaborators();
-		//$this->log('send vars ',json_encode($vars));
+
+		$resp['response'] = $this->responseentry->getBody();
+		$resp['reply-to'] = 'all';
+		$resp['emailcollab'] = $this->ticket->getActiveCollaborators();
+		//$this->log('AP send',json_encode($resp));
 		
 		$errors = array();
-		$response = $this->postReply($vars, $errors, true, true, $this->responseentry);
-		//$this->log('Response',json_encode($response));
+		$response = $this->postReply($resp, $errors, true, true, $this->responseentry);
+		//$this->log('AP Response',json_encode($response));
 		
 		if (!empty($errors)) {
-			$this->log('PostReply Errors', json_encode($errors));
+			$this->log('AP PostReply Errors', json_encode($errors));
 			return false;	
 		}
 		
 		return true;
 	}	
 	 
-    function postReply($vars, &$errors, $alert=true, $claim=true, $response) {
+    function postReply($resp, &$errors, $alert=true, $claim=true, $response) {
         global $thisstaff, $cfg;
 
-        if (!$vars['poster'] && $thisstaff)
-            $vars['poster'] = $thisstaff;
+        if (!$resp['poster'] && $thisstaff)
+            $resp['poster'] = $thisstaff;
 
-        if (!$vars['staffId'] && $thisstaff)
-            $vars['staffId'] = $thisstaff->getId();
+        if (!$resp['staffId'] && $thisstaff)
+            $resp['staffId'] = $thisstaff->getId();
 
-        if (!$vars['ip_address'] && $_SERVER['REMOTE_ADDR'])
-            $vars['ip_address'] = $_SERVER['REMOTE_ADDR'];
+        if (!$resp['ip_address'] && $_SERVER['REMOTE_ADDR'])
+            $resp['ip_address'] = $_SERVER['REMOTE_ADDR'];
 
         // clear db cache
         $this->ticket->getThread()->_collaborators = null;
 
         // Get active recipients of the response
-        $recipients = $this->ticket->getRecipients($vars['reply-to'], $vars['ccs']);
+        $recipients = $this->ticket->getRecipients($resp['reply-to'], $resp['ccs']);
         if ($recipients instanceof MailingList)
-            $vars['thread_entry_recipients'] = $recipients->getEmailAddresses();
+            $resp['thread_entry_recipients'] = $recipients->getEmailAddresses();
 		
         $dept = $this->ticket->getDept();
         $assignee = $this->ticket->getStaff();
         // Set status if new is selected
-        if ($vars['reply_status_id']
-                && ($status = TicketStatus::lookup($vars['reply_status_id']))
+        if ($resp['reply_status_id']
+                && ($status = TicketStatus::lookup($resp['reply_status_id']))
                 && $status->getId() != $this->ticket->getStatusId())
             $this->ticket->setStatus($status);
 
@@ -209,15 +205,15 @@ class agentReplyPlugin extends Plugin
             return $response;
 
         //allow agent to send from different dept email
-        if (!$vars['from_email_id']
-                ||  !($email = Email::lookup($vars['from_email_id'])))
+        if (!$resp['from_email_id']
+                ||  !($email = Email::lookup($resp['from_email_id'])))
             $email = $dept->getEmail();
 
         $options = array('thread'=>$response);
         $signature = $from_name = '';
-        if ($thisstaff && $vars['signature']=='mine')
+        if ($thisstaff && $resp['signature']=='mine')
             $signature=$thisstaff->getSignature();
-        elseif ($vars['signature']=='dept' && $dept->isPublic())
+        elseif ($resp['signature']=='dept' && $dept->isPublic())
             $signature=$dept->getSignature();
 
         if ($thisstaff && ($type=$thisstaff->getReplyFromNameType())) {
